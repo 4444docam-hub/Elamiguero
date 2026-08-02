@@ -1,0 +1,225 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
+  Image, KeyboardAvoidingView, Platform, ActivityIndicator
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { messagesAPI, conversationsAPI } from '../services/api';
+import { COLORS, getProfileImageUrl, getChatImageUrl, SUPABASE_URL } from '../utils/constants';
+import { useAuth } from '../context/AuthContext';
+
+const ChatScreen = ({ route }) => {
+  const { conversationId, userId, userName, userImage } = route.params;
+  const { user, profile } = useAuth();
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState(null);
+  const flatListRef = useRef();
+
+  useEffect(() => {
+    loadMessages();
+    setupRealtime();
+
+    return () => {
+      if (subscription) {
+        messagesAPI.unsubscribeFromMessages(subscription);
+      }
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
+  const loadMessages = async () => {
+    try {
+      setLoading(true);
+      const msgs = await messagesAPI.getMessages(conversationId);
+      setMessages(msgs);
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setupRealtime = () => {
+    const sub = messagesAPI.subscribeToMessages(conversationId, (newMessage) => {
+      setMessages(prev => [...prev, newMessage]);
+    });
+    setSubscription(sub);
+  };
+
+  const handleSendText = async () => {
+    if (!newMessage.trim()) return;
+
+    const tempMessage = {
+      id: Date.now().toString(),
+      content: newMessage,
+      sender_id: user.id,
+      profiles: { id: user.id, name: profile?.name, profile_image: profile?.profile_image },
+      created_at: new Date().toISOString(),
+      conversation_id: conversationId
+    };
+
+    setMessages(prev => [...prev, tempMessage]);
+    setNewMessage('');
+
+    try {
+      await messagesAPI.sendMessage(conversationId, user.id, newMessage);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const handleSendImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        const imageUrl = await messagesAPI.uploadChatImage(conversationId, {
+          uri: result.assets[0].uri,
+          type: 'image/jpeg'
+        });
+
+        const tempMessage = {
+          id: Date.now().toString(),
+          image_url: imageUrl,
+          sender_id: user.id,
+          profiles: { id: user.id, name: profile?.name, profile_image: profile?.profile_image },
+          created_at: new Date().toISOString(),
+          conversation_id: conversationId
+        };
+
+        setMessages(prev => [...prev, tempMessage]);
+        await messagesAPI.sendMessage(conversationId, user.id, '', imageUrl);
+      }
+    } catch (error) {
+      console.error('Error sending image:', error);
+    }
+  };
+
+  const formatTime = (date) => {
+    const d = new Date(date);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const renderMessage = ({ item }) => {
+    const isOwn = item.sender_id === user.id;
+
+    return (
+      <View style={[styles.messageContainer, isOwn ? styles.ownMessage : styles.otherMessage]}>
+        {!isOwn && (
+          <Image
+            source={{ uri: getProfileImageUrl(item.profiles?.profile_image) }}
+            style={styles.messageAvatar}
+          />
+        )}
+        <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
+          {item.image_url && (
+            <Image source={{ uri: item.image_url }} style={styles.messageImage} />
+          )}
+          {item.content ? (
+            <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
+              {item.content}
+            </Text>
+          ) : null}
+          <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
+            {formatTime(item.created_at)}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={90}
+    >
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        renderItem={renderMessage}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.messagesList}
+        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+      />
+      <View style={styles.inputContainer}>
+        <TouchableOpacity style={styles.imageButton} onPress={handleSendImage}>
+          <Ionicons name="image" size={24} color={COLORS.primary} />
+        </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          value={newMessage}
+          onChangeText={setNewMessage}
+          placeholder="Type a message..."
+          placeholderTextColor={COLORS.textLight}
+          multiline
+          maxLength={500}
+        />
+        <TouchableOpacity
+          style={[styles.sendButton, !newMessage.trim() && styles.sendButtonDisabled]}
+          onPress={handleSendText}
+          disabled={!newMessage.trim()}
+        >
+          <Ionicons name="send" size={20} color={COLORS.white} />
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  messagesList: { padding: 15, paddingBottom: 10 },
+  messageContainer: { flexDirection: 'row', marginBottom: 12, maxWidth: '80%' },
+  ownMessage: { alignSelf: 'flex-end' },
+  otherMessage: { alignSelf: 'flex-start' },
+  messageAvatar: { width: 32, height: 32, borderRadius: 16, marginRight: 8 },
+  messageBubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, maxWidth: '100%' },
+  ownBubble: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
+  otherBubble: { backgroundColor: COLORS.white, borderBottomLeftRadius: 4 },
+  messageImage: { width: 200, height: 150, borderRadius: 12, marginBottom: 8 },
+  messageText: { fontSize: 15, color: COLORS.text },
+  ownMessageText: { color: COLORS.white },
+  messageTime: { fontSize: 10, color: COLORS.textLight, marginTop: 4, alignSelf: 'flex-end' },
+  ownMessageTime: { color: 'rgba(255,255,255,0.7)' },
+  inputContainer: {
+    flexDirection: 'row', alignItems: 'flex-end', padding: 10,
+    backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  imageButton: { padding: 8, marginRight: 5 },
+  input: {
+    flex: 1, backgroundColor: COLORS.background, borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, maxHeight: 100,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  sendButton: {
+    backgroundColor: COLORS.primary, width: 40, height: 40,
+    borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginLeft: 10,
+  },
+  sendButtonDisabled: { opacity: 0.5 },
+});
+
+export default ChatScreen;
