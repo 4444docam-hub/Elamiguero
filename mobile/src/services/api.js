@@ -1,4 +1,30 @@
 import { supabase } from './supabase';
+import { File } from 'expo-file-system';
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+async function uploadToStorage(bucket, filePath, uri, contentType) {
+  const bytes = await new File(uri).bytes();
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, bytes, {
+      contentType,
+      upsert: true
+    });
+  if (error) throw error;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+}
 
 // ============================================
 // AUTH SERVICES
@@ -77,21 +103,12 @@ export const profileAPI = {
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
     const filePath = `profiles/${fileName}`;
 
-    const response = await fetch(file.uri);
-    const blob = await response.blob();
-
-    const { error: uploadError } = await supabase.storage
-      .from('profile-images')
-      .upload(filePath, blob, {
-        contentType: file.type || 'image/jpeg',
-        upsert: true
-      });
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('profile-images')
-      .getPublicUrl(filePath);
+    const imageUrl = await uploadToStorage(
+      'profile-images',
+      filePath,
+      file.uri,
+      file.type || 'image/jpeg'
+    );
 
     const { data, error } = await supabase
       .from('profiles')
@@ -101,7 +118,7 @@ export const profileAPI = {
       .single();
 
     if (error) throw error;
-    return { user: data, imageUrl: publicUrl };
+    return { user: data, imageUrl };
   },
 
   getSuggestions: async (userId) => {
@@ -300,18 +317,30 @@ export const conversationsAPI = {
       }
     }
 
-    const { data: newConversation, error: convError } = await supabase
+    const conversationId = uuidv4();
+
+    const { error: convError } = await supabase
       .from('conversations')
-      .insert({})
-      .select()
-      .single();
+      .insert({ id: conversationId });
 
     if (convError) throw convError;
 
-    await supabase.from('conversation_participants').insert([
-      { conversation_id: newConversation.id, user_id: userId1 },
-      { conversation_id: newConversation.id, user_id: userId2 }
-    ]);
+    const { error: participantsError } = await supabase
+      .from('conversation_participants')
+      .insert([
+        { conversation_id: conversationId, user_id: userId1 },
+        { conversation_id: conversationId, user_id: userId2 }
+      ]);
+
+    if (participantsError) throw participantsError;
+
+    const { data: newConversation, error: selectError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('id', conversationId)
+      .single();
+
+    if (selectError) throw selectError;
 
     return newConversation;
   },
@@ -410,22 +439,12 @@ export const messagesAPI = {
     const fileName = `${conversationId}-${Date.now()}.${fileExt}`;
     const filePath = `chat/${fileName}`;
 
-    const response = await fetch(file.uri);
-    const blob = await response.blob();
-
-    const { error: uploadError } = await supabase.storage
-      .from('chat-images')
-      .upload(filePath, blob, {
-        contentType: file.type || 'image/jpeg'
-      });
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('chat-images')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
+    return uploadToStorage(
+      'chat-images',
+      filePath,
+      file.uri,
+      file.type || 'image/jpeg'
+    );
   },
 
   subscribeToMessages: (conversationId, callback) => {
