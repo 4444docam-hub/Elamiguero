@@ -299,12 +299,12 @@ export const conversationsAPI = {
 
     if (existing && existing.length > 0) {
       for (const ep of existing) {
-        const { data: otherParticipant } = await supabase
-          .from('conversation_participants')
-          .select('user_id')
-          .eq('conversation_id', ep.conversation_id)
-          .neq('user_id', userId1)
-          .single();
+        const { data: participants, error: otherError } = await supabase
+          .rpc('get_conversation_participants', { conv_id: ep.conversation_id });
+
+        if (otherError) throw otherError;
+
+        const otherParticipant = participants.find(p => p.user_id !== userId1);
 
         if (otherParticipant && otherParticipant.user_id === userId2) {
           const { data: conversation } = await supabase
@@ -366,10 +366,10 @@ export const conversationsAPI = {
 
     const result = [];
     for (const conv of conversations) {
-      const { data: participants } = await supabase
-        .from('conversation_participants')
-        .select('user_id')
-        .eq('conversation_id', conv.id);
+      const { data: participants, error: participantsError } = await supabase
+        .rpc('get_conversation_participants', { conv_id: conv.id });
+
+      if (participantsError) throw participantsError;
 
       const participantIds = participants.map(p => p.user_id);
       const { data: profiles } = await supabase

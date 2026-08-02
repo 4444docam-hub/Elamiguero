@@ -155,13 +155,7 @@ CREATE POLICY "Users can create conversations" ON conversations
 
 -- Conversation participants policies
 CREATE POLICY "Users can view own conversation participants" ON conversation_participants
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM conversation_participants cp
-      WHERE cp.conversation_id = conversation_participants.conversation_id
-      AND cp.user_id = auth.uid()
-    )
-  );
+  FOR SELECT USING (user_id = auth.uid());
 
 CREATE POLICY "Users can add conversation participants" ON conversation_participants
   FOR INSERT WITH CHECK (true);
@@ -189,6 +183,30 @@ CREATE POLICY "Users can send messages to own conversations" ON messages
 -- ============================================
 -- FUNCTIONS
 -- ============================================
+
+-- Returns all participants of a conversation, but only if the caller
+-- belongs to that conversation. SECURITY DEFINER bypasses RLS, so it
+-- avoids the infinite recursion of the self-referencing SELECT policy.
+CREATE OR REPLACE FUNCTION public.get_conversation_participants(conv_id uuid)
+RETURNS SETOF conversation_participants
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT cp.*
+  FROM conversation_participants cp
+  WHERE cp.conversation_id = conv_id
+    AND EXISTS (
+      SELECT 1
+      FROM conversation_participants me
+      WHERE me.conversation_id = conv_id
+        AND me.user_id = auth.uid()
+    );
+$$;
+
+REVOKE ALL ON FUNCTION public.get_conversation_participants(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_conversation_participants(uuid) TO authenticated;
 
 -- Function to automatically create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
