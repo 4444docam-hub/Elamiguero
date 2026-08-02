@@ -73,21 +73,17 @@ export const profileAPI = {
   },
 
   uploadProfileImage: async (userId, file) => {
-    const fileExt = file.uri.split('.').pop();
+    const fileExt = file.uri.split('.').pop() || 'jpg';
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
     const filePath = `profiles/${fileName}`;
 
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      type: file.type || 'image/jpeg',
-      name: fileName
-    });
+    const response = await fetch(file.uri);
+    const blob = await response.blob();
 
     const { error: uploadError } = await supabase.storage
       .from('profile-images')
-      .upload(filePath, formData, {
-        contentType: 'image/jpeg',
+      .upload(filePath, blob, {
+        contentType: file.type || 'image/jpeg',
         upsert: true
       });
 
@@ -410,21 +406,17 @@ export const messagesAPI = {
   },
 
   uploadChatImage: async (conversationId, file) => {
-    const fileExt = file.uri.split('.').pop();
+    const fileExt = file.uri.split('.').pop() || 'jpg';
     const fileName = `${conversationId}-${Date.now()}.${fileExt}`;
     const filePath = `chat/${fileName}`;
 
-    const formData = new FormData();
-    formData.append('file', {
-      uri: file.uri,
-      type: file.type || 'image/jpeg',
-      name: fileName
-    });
+    const response = await fetch(file.uri);
+    const blob = await response.blob();
 
     const { error: uploadError } = await supabase.storage
       .from('chat-images')
-      .upload(filePath, formData, {
-        contentType: 'image/jpeg'
+      .upload(filePath, blob, {
+        contentType: file.type || 'image/jpeg'
       });
 
     if (uploadError) throw uploadError;

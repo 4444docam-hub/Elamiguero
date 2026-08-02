@@ -51,11 +51,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signUp = async ({ name, email, password }) => {
+  const signUp = async ({ name, email, password, bio, age }) => {
     try {
       const data = await authAPI.signUp({ email, password, name });
       if (data.user) {
         setUser(data.user);
+        if (bio || age) {
+          try {
+            await profileAPI.updateProfile(data.user.id, {
+              bio: bio || '',
+              age: age || null
+            });
+          } catch (e) {
+            console.warn('No se pudo guardar bio/edad:', e.message);
+          }
+        }
         await loadProfile(data.user.id);
       }
       return { success: true };

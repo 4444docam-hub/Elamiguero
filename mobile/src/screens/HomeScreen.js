@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  PanResponder,
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,34 +20,48 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const SwipeCard = ({ user, onSwipeLeft, onSwipeRight }) => {
-  const translateX = new Animated.Value(0);
-  const likeOpacity = new Animated.Value(0);
-  const dislikeOpacity = new Animated.Value(0);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const likeOpacity = useRef(new Animated.Value(0)).current;
+  const dislikeOpacity = useRef(new Animated.Value(0)).current;
 
-  const panResponder = {
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderMove: (evt, gestureState) => {
-      translateX.setValue(gestureState.dx);
-      if (gestureState.dx > 0) {
-        likeOpacity.setValue(Math.min(gestureState.dx / SWIPE_THRESHOLD, 1));
-      } else {
-        dislikeOpacity.setValue(Math.min(-gestureState.dx / SWIPE_THRESHOLD, 1));
+  const callbacksRef = useRef({ onSwipeLeft, onSwipeRight });
+  callbacksRef.current = { onSwipeLeft, onSwipeRight };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (evt, gestureState) => {
+        translateX.setValue(gestureState.dx);
+        if (gestureState.dx > 0) {
+          likeOpacity.setValue(Math.min(gestureState.dx / SWIPE_THRESHOLD, 1));
+        } else {
+          dislikeOpacity.setValue(Math.min(-gestureState.dx / SWIPE_THRESHOLD, 1));
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const { onSwipeLeft: left, onSwipeRight: right } = callbacksRef.current;
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          Animated.timing(translateX, {
+            toValue: SCREEN_WIDTH * 1.5,
+            duration: 220,
+            useNativeDriver: true
+          }).start(() => right());
+        } else if (gestureState.dx < -SWIPE_THRESHOLD) {
+          Animated.timing(translateX, {
+            toValue: -SCREEN_WIDTH * 1.5,
+            duration: 220,
+            useNativeDriver: true
+          }).start(() => left());
+        } else {
+          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+          Animated.parallel([
+            Animated.spring(likeOpacity, { toValue: 0, useNativeDriver: true }),
+            Animated.spring(dislikeOpacity, { toValue: 0, useNativeDriver: true })
+          ]).start();
+        }
       }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dx > SWIPE_THRESHOLD) {
-        onSwipeRight();
-      } else if (gestureState.dx < -SWIPE_THRESHOLD) {
-        onSwipeLeft();
-      } else {
-        Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
-        Animated.parallel([
-          Animated.spring(likeOpacity, { toValue: 0, useNativeDriver: true }),
-          Animated.spring(dislikeOpacity, { toValue: 0, useNativeDriver: true })
-        ]).start();
-      }
-    }
-  };
+    })
+  ).current;
 
   const rotate = translateX.interpolate({
     inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
@@ -57,7 +72,7 @@ const SwipeCard = ({ user, onSwipeLeft, onSwipeRight }) => {
   return (
     <Animated.View
       style={[styles.card, { transform: [{ translateX }, { rotate }] }]}
-      {...panResponder}
+      {...panResponder.panHandlers}
     >
       <Image
         source={{ uri: getProfileImageUrl(user.profile_image) }}
