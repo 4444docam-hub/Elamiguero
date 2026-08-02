@@ -78,6 +78,7 @@ CREATE TABLE messages (
   sender_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   content TEXT DEFAULT '',
   image_url TEXT,
+  read_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -173,6 +174,15 @@ CREATE POLICY "Users can view messages in own conversations" ON messages
 CREATE POLICY "Users can send messages to own conversations" ON messages
   FOR INSERT WITH CHECK (
     auth.uid() = sender_id AND
+    EXISTS (
+      SELECT 1 FROM conversation_participants
+      WHERE conversation_id = messages.conversation_id
+      AND user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can mark messages read in own conversations" ON messages
+  FOR UPDATE USING (
     EXISTS (
       SELECT 1 FROM conversation_participants
       WHERE conversation_id = messages.conversation_id

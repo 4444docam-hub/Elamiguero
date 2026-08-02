@@ -15,33 +15,38 @@ const ChatScreen = ({ route }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const [subscription, setSubscription] = useState(null);
+  const subscriptionRef = useRef(null);
   const flatListRef = useRef();
 
   useEffect(() => {
     loadMessages();
-    setupRealtime();
+
+    const sub = messagesAPI.subscribeToMessages(conversationId, handleRealtimeMessage);
+    subscriptionRef.current = sub;
 
     return () => {
-      if (subscription) {
-        messagesAPI.unsubscribeFromMessages(subscription);
+      if (subscriptionRef.current) {
+        messagesAPI.unsubscribeFromMessages(subscriptionRef.current);
+        subscriptionRef.current = null;
       }
     };
   }, [conversationId]);
 
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+  const handleRealtimeMessage = (newMessage) => {
+    setMessages(prev =>
+      prev.some(m => m.id === newMessage.id) ? prev : [...prev, newMessage]
+    );
+    if (newMessage.sender_id !== user.id) {
+      messagesAPI.markConversationRead(conversationId, user.id).catch(() => {});
     }
-  }, [messages]);
+  };
 
   const loadMessages = async () => {
     try {
       setLoading(true);
       const msgs = await messagesAPI.getMessages(conversationId);
       setMessages(msgs);
+      messagesAPI.markConversationRead(conversationId, user.id).catch(() => {});
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
@@ -49,19 +54,14 @@ const ChatScreen = ({ route }) => {
     }
   };
 
-  const setupRealtime = () => {
-    const sub = messagesAPI.subscribeToMessages(conversationId, (newMessage) => {
-      setMessages(prev => [...prev, newMessage]);
-    });
-    setSubscription(sub);
-  };
-
   const handleSendText = async () => {
     if (!newMessage.trim()) return;
 
+    const content = newMessage;
+    const tempId = `temp-${Date.now()}`;
     const tempMessage = {
-      id: Date.now().toString(),
-      content: newMessage,
+      id: tempId,
+      content,
       sender_id: user.id,
       profiles: { id: user.id, name: profile?.name, profile_image: profile?.profile_image },
       created_at: new Date().toISOString(),
@@ -72,7 +72,11 @@ const ChatScreen = ({ route }) => {
     setNewMessage('');
 
     try {
-      await messagesAPI.sendMessage(conversationId, user.id, newMessage);
+      const sent = await messagesAPI.sendMessage(conversationId, user.id, content);
+      setMessages(prev => {
+        const withoutTemp = prev.filter(m => m.id !== tempId && m.id !== sent.id);
+        return [...withoutTemp, sent];
+      });
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -98,8 +102,9 @@ const ChatScreen = ({ route }) => {
           type: 'image/jpeg'
         });
 
+        const tempId = `temp-${Date.now()}`;
         const tempMessage = {
-          id: Date.now().toString(),
+          id: tempId,
           image_url: imageUrl,
           sender_id: user.id,
           profiles: { id: user.id, name: profile?.name, profile_image: profile?.profile_image },
@@ -108,7 +113,11 @@ const ChatScreen = ({ route }) => {
         };
 
         setMessages(prev => [...prev, tempMessage]);
-        await messagesAPI.sendMessage(conversationId, user.id, '', imageUrl);
+        const sent = await messagesAPI.sendMessage(conversationId, user.id, '', imageUrl);
+        setMessages(prev => {
+          const withoutTemp = prev.filter(m => m.id !== tempId && m.id !== sent.id);
+          return [...withoutTemp, sent];
+        });
       }
     } catch (error) {
       console.error('Error sending image:', error);

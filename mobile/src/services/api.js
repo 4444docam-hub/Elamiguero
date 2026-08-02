@@ -385,10 +385,20 @@ export const conversationsAPI = {
         .limit(1)
         .single();
 
+      if (!lastMsg) continue;
+
+      const { count } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('conversation_id', conv.id)
+        .eq('read_at', null)
+        .neq('sender_id', userId);
+
       result.push({
         ...conv,
         participants: profiles,
-        lastMessage: lastMsg || null
+        lastMessage: lastMsg,
+        unreadCount: count || 0
       });
     }
 
@@ -432,6 +442,34 @@ export const messagesAPI = {
       .eq('id', conversationId);
 
     return data;
+  },
+
+  markConversationRead: async (conversationId, userId) => {
+    const { error } = await supabase
+      .from('messages')
+      .update({ read_at: new Date().toISOString() })
+      .eq('conversation_id', conversationId)
+      .eq('read_at', null)
+      .neq('sender_id', userId);
+
+    if (error) throw error;
+  },
+
+  subscribeToMessagesFeed: (userId, callback) => {
+    const subscription = supabase
+      .channel(`messages-feed:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload) => callback(payload.new)
+      )
+      .subscribe();
+
+    return subscription;
   },
 
   uploadChatImage: async (conversationId, file) => {

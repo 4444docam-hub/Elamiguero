@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
   ActivityIndicator, RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { conversationsAPI } from '../services/api';
+import { useFocusEffect } from '@react-navigation/native';
+import { conversationsAPI, messagesAPI } from '../services/api';
 import { COLORS, getProfileImageUrl } from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,22 +14,41 @@ const ChatListScreen = ({ navigation }) => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const feedRef = useRef(null);
 
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const convs = await conversationsAPI.getConversations(user.id);
       setConversations(convs);
     } catch (error) {
       console.error('Error loading conversations:', error);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
-  };
+  }, [user.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadConversations();
+    }, [loadConversations])
+  );
+
+  useEffect(() => {
+    const sub = messagesAPI.subscribeToMessagesFeed(user.id, (msg) => {
+      if (msg.sender_id !== user.id) {
+        loadConversations(false);
+      }
+    });
+    feedRef.current = sub;
+
+    return () => {
+      if (feedRef.current) {
+        messagesAPI.unsubscribeFromMessages(feedRef.current);
+        feedRef.current = null;
+      }
+    };
+  }, [user.id, loadConversations]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -73,12 +93,21 @@ const ChatListScreen = ({ navigation }) => {
         <View style={styles.conversationInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.name} numberOfLines={1}>{otherUser?.name}</Text>
-            {lastMessage?.created_at && (
-              <Text style={styles.time}>{formatTime(lastMessage.created_at)}</Text>
-            )}
+            <View style={styles.rightSide}>
+              {lastMessage?.created_at && (
+                <Text style={styles.time}>{formatTime(lastMessage.created_at)}</Text>
+              )}
+              {item.unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {item.unreadCount > 99 ? '99+' : item.unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
           {lastMessage && (
-            <Text style={styles.lastMessage} numberOfLines={1}>
+            <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.lastMessageUnread]} numberOfLines={1}>
               {lastMessage.image_url ? '📷 Image' : lastMessage.content}
             </Text>
           )}
@@ -126,8 +155,15 @@ const styles = StyleSheet.create({
   conversationInfo: { flex: 1 },
   nameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
   name: { fontSize: 16, fontWeight: '600', color: COLORS.text, flex: 1 },
+  rightSide: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   time: { fontSize: 12, color: COLORS.textLight },
   lastMessage: { fontSize: 14, color: COLORS.textLight },
+  lastMessageUnread: { color: COLORS.text, fontWeight: '500' },
+  badge: {
+    minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6,
+    backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center',
+  },
+  badgeText: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   emptyText: { fontSize: 20, fontWeight: '600', color: COLORS.text, marginTop: 20 },
   emptySubtext: { fontSize: 14, color: COLORS.textLight, marginTop: 10, textAlign: 'center' },

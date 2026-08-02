@@ -78,6 +78,14 @@ const SwipeCard = ({ user, onSwipeLeft, onSwipeRight }) => {
         source={{ uri: getProfileImageUrl(user.profile_image) }}
         style={styles.cardImage}
       />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.glowOverlay, styles.glowGreen, { opacity: likeOpacity }]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.glowOverlay, styles.glowRed, { opacity: dislikeOpacity }]}
+      />
       <Animated.View style={[styles.likeStamp, { opacity: likeOpacity }]}>
         <Text style={styles.stampText}>LIKE</Text>
       </Animated.View>
@@ -214,15 +222,39 @@ const styles = StyleSheet.create({
   interestTag: { backgroundColor: COLORS.primary + '20', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   interestText: { color: COLORS.primary, fontSize: 12, fontWeight: '500' },
   likeStamp: {
-    position: 'absolute', top: 50, right: 20, borderWidth: 3, borderColor: COLORS.success,
-    borderRadius: 10, padding: 10, transform: [{ rotate: '15deg' }],
+    position: 'absolute', top: 50, right: 20, borderWidth: 4, borderColor: COLORS.success,
+    borderRadius: 10, padding: 12, transform: [{ rotate: '15deg' }],
   },
   dislikeStamp: {
-    position: 'absolute', top: 50, left: 20, borderWidth: 3, borderColor: COLORS.error,
-    borderRadius: 10, padding: 10, transform: [{ rotate: '-15deg' }],
+    position: 'absolute', top: 50, left: 20, borderWidth: 4, borderColor: COLORS.error,
+    borderRadius: 10, padding: 12, transform: [{ rotate: '-15deg' }],
   },
-  stampText: { fontSize: 24, fontWeight: 'bold', color: COLORS.success },
+  stampText: { fontSize: 28, fontWeight: 'bold', color: COLORS.success },
   dislikeText: { color: COLORS.error },
+  glowOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+  },
+  glowGreen: {
+    borderWidth: 6,
+    borderColor: COLORS.success,
+    backgroundColor: 'rgba(0, 184, 148, 0.12)',
+    shadowColor: COLORS.success,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  glowRed: {
+    borderWidth: 6,
+    borderColor: COLORS.error,
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+    shadowColor: COLORS.error,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    elevation: 12,
+  },
   actionButtons: {
     flexDirection: 'row', justifyContent: 'center', gap: 40,
     paddingVertical: 20, paddingBottom: 100,
