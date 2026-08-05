@@ -128,6 +128,9 @@ CREATE POLICY "Users can create friend requests" ON friend_requests
 CREATE POLICY "Users can update received requests" ON friend_requests
   FOR UPDATE USING (auth.uid() = to_user_id);
 
+CREATE POLICY "Users can resend own friend requests" ON friend_requests
+  FOR UPDATE USING (auth.uid() = from_user_id);
+
 CREATE POLICY "Users can delete own requests" ON friend_requests
   FOR DELETE USING (auth.uid() = from_user_id OR auth.uid() = to_user_id);
 
