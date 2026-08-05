@@ -30,12 +30,12 @@ async function uploadToStorage(bucket, filePath, uri, contentType) {
 // AUTH SERVICES
 // ============================================
 export const authAPI = {
-  signUp: async ({ email, password, name }) => {
+  signUp: async ({ email, password, name, bio, age }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name }
+        data: { name, bio: bio || '', age: age || null }
       }
     });
     if (error) throw error;

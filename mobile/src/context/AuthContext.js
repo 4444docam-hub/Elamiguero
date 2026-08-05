@@ -51,14 +51,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfileWithRetry = async (userId, updates, attempts = 5) => {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        await profileAPI.updateProfile(userId, updates);
+        return;
+      } catch (e) {
+        if (i === attempts - 1) throw e;
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  };
+
   const signUp = async ({ name, email, password, bio, age }) => {
     try {
-      const data = await authAPI.signUp({ email, password, name });
+      const data = await authAPI.signUp({ email, password, name, bio, age });
       if (data.user) {
         setUser(data.user);
         if (bio || age) {
           try {
-            await profileAPI.updateProfile(data.user.id, {
+            await updateProfileWithRetry(data.user.id, {
               bio: bio || '',
               age: age || null
             });

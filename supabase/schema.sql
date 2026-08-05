@@ -222,11 +222,13 @@ GRANT EXECUTE ON FUNCTION public.get_conversation_participants(uuid) TO authenti
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, name, email)
+  INSERT INTO public.profiles (id, name, email, bio, age)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'name', 'User'),
-    NEW.email
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'bio', ''),
+    NULLIF(NEW.raw_user_meta_data->>'age', '')::int
   );
   RETURN NEW;
 END;
