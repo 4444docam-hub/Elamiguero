@@ -1,23 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
   ActivityIndicator, Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { friendsAPI, conversationsAPI } from '../services/api';
 import { COLORS, getProfileImageUrl } from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const FriendsScreen = ({ navigation }) => {
   const { user } = useAuth();
+  const { refreshCounts } = useNotifications();
   const [activeTab, setActiveTab] = useState('requests');
   const [pendingRequests, setPendingRequests] = useState([]);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+      friendsAPI.markRequestsViewed(user.id)
+        .then(() => refreshCounts())
+        .catch(() => {});
+    }, [user.id])
+  );
 
   const loadData = async () => {
     try {
@@ -39,6 +47,7 @@ const FriendsScreen = ({ navigation }) => {
     try {
       await friendsAPI.acceptRequest(requestId);
       loadData();
+      refreshCounts();
       Alert.alert('Success', 'Friend request accepted!');
     } catch (error) {
       Alert.alert('Error', 'Failed to accept request');
@@ -49,6 +58,7 @@ const FriendsScreen = ({ navigation }) => {
     try {
       await friendsAPI.rejectRequest(requestId);
       loadData();
+      refreshCounts();
     } catch (error) {
       Alert.alert('Error', 'Failed to reject request');
     }

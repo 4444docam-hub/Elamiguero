@@ -8,9 +8,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { conversationsAPI, messagesAPI } from '../services/api';
 import { COLORS, getProfileImageUrl } from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const ChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
+  const { refreshCounts } = useNotifications();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,13 +33,15 @@ const ChatListScreen = ({ navigation }) => {
   useFocusEffect(
     useCallback(() => {
       loadConversations();
-    }, [loadConversations])
+      refreshCounts();
+    }, [loadConversations, refreshCounts])
   );
 
   useEffect(() => {
     const sub = messagesAPI.subscribeToMessagesFeed(user.id, (msg) => {
       if (msg.sender_id !== user.id) {
         loadConversations(false);
+        refreshCounts();
       }
     });
     feedRef.current = sub;
@@ -48,7 +52,7 @@ const ChatListScreen = ({ navigation }) => {
         feedRef.current = null;
       }
     };
-  }, [user.id, loadConversations]);
+  }, [user.id, loadConversations, refreshCounts]);
 
   const onRefresh = async () => {
     setRefreshing(true);

@@ -32,6 +32,7 @@ CREATE TABLE friend_requests (
   from_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   to_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   status TEXT CHECK (status IN ('pending', 'accepted', 'rejected')) DEFAULT 'pending',
+  viewed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(from_user_id, to_user_id)

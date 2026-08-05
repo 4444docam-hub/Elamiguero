@@ -248,6 +248,29 @@ export const friendsAPI = {
     return data;
   },
 
+  getPendingRequestsCount: async (userId) => {
+    const { count, error } = await supabase
+      .from('friend_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('to_user_id', userId)
+      .eq('status', 'pending')
+      .is('viewed_at', null);
+
+    if (error) throw error;
+    return count || 0;
+  },
+
+  markRequestsViewed: async (userId) => {
+    const { error } = await supabase
+      .from('friend_requests')
+      .update({ viewed_at: new Date().toISOString() })
+      .eq('to_user_id', userId)
+      .eq('status', 'pending')
+      .is('viewed_at', null);
+
+    if (error) throw error;
+  },
+
   getFriendsList: async (userId) => {
     const { data: friendships, error } = await supabase
       .from('friendships')
@@ -452,6 +475,17 @@ export const messagesAPI = {
       .neq('sender_id', userId);
 
     if (error) throw error;
+  },
+
+  getUnreadCount: async (userId) => {
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .neq('sender_id', userId)
+      .eq('read_at', null);
+
+    if (error) throw error;
+    return count || 0;
   },
 
   subscribeToMessagesFeed: (userId, callback) => {

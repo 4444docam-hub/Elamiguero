@@ -4,6 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { COLORS } from '../utils/constants';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -54,42 +55,52 @@ const ChatStack = () => (
   </Stack.Navigator>
 );
 
-const MainTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarIcon: ({ focused, color, size }) => {
-        let iconName;
-        if (route.name === 'DiscoverTab') {
-          iconName = focused ? 'compass' : 'compass-outline';
-        } else if (route.name === 'ChatsTab') {
-          iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-        } else if (route.name === 'ProfileTab') {
-          iconName = focused ? 'person' : 'person-outline';
-        }
-        return <Ionicons name={iconName} size={size} color={color} />;
-      },
-      tabBarActiveTintColor: COLORS.primary,
-      tabBarInactiveTintColor: COLORS.textLight,
-    })}
-  >
-    <Tab.Screen 
-      name="DiscoverTab" 
-      component={HomeStack}
-      options={{ title: 'Discover' }}
-    />
-    <Tab.Screen 
-      name="ChatsTab" 
-      component={ChatStack}
-      options={{ title: 'Chats' }}
-    />
-    <Tab.Screen 
-      name="ProfileTab" 
-      component={ProfileScreen}
-      options={{ title: 'Profile' }}
-    />
-  </Tab.Navigator>
-);
+const MainTabs = () => {
+  const { unreadMessages, pendingRequests } = useNotifications();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'DiscoverTab') {
+            iconName = focused ? 'compass' : 'compass-outline';
+          } else if (route.name === 'ChatsTab') {
+            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
+          } else if (route.name === 'ProfileTab') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textLight,
+      })}
+    >
+      <Tab.Screen
+        name="DiscoverTab"
+        component={HomeStack}
+        options={{
+          title: 'Discover',
+          tabBarBadge: pendingRequests > 0 ? pendingRequests : undefined,
+        }}
+      />
+      <Tab.Screen
+        name="ChatsTab"
+        component={ChatStack}
+        options={{
+          title: 'Chats',
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+};
 
 const AppNavigator = () => {
   const { isAuthenticated, loading } = useAuth();

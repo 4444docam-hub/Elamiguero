@@ -8,10 +8,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { messagesAPI, conversationsAPI } from '../services/api';
 import { COLORS, getProfileImageUrl, getChatImageUrl, SUPABASE_URL } from '../utils/constants';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const ChatScreen = ({ route }) => {
   const { conversationId, userId, userName, userImage } = route.params;
   const { user, profile } = useAuth();
+  const { refreshCounts } = useNotifications();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,9 @@ const ChatScreen = ({ route }) => {
       prev.some(m => m.id === newMessage.id) ? prev : [...prev, newMessage]
     );
     if (newMessage.sender_id !== user.id) {
-      messagesAPI.markConversationRead(conversationId, user.id).catch(() => {});
+      messagesAPI.markConversationRead(conversationId, user.id)
+        .then(() => refreshCounts())
+        .catch(() => {});
     }
   };
 
@@ -46,7 +50,9 @@ const ChatScreen = ({ route }) => {
       setLoading(true);
       const msgs = await messagesAPI.getMessages(conversationId);
       setMessages(msgs);
-      messagesAPI.markConversationRead(conversationId, user.id).catch(() => {});
+      messagesAPI.markConversationRead(conversationId, user.id)
+        .then(() => refreshCounts())
+        .catch(() => {});
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
