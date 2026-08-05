@@ -251,7 +251,7 @@ export const friendsAPI = {
   getPendingRequestsCount: async (userId) => {
     const { count, error } = await supabase
       .from('friend_requests')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('to_user_id', userId)
       .eq('status', 'pending')
       .is('viewed_at', null);
@@ -411,9 +411,9 @@ export const conversationsAPI = {
 
       const { count } = await supabase
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('conversation_id', conv.id)
-        .eq('read_at', null)
+        .is('read_at', null)
         .neq('sender_id', userId);
 
       result.push({
@@ -471,7 +471,7 @@ export const messagesAPI = {
       .from('messages')
       .update({ read_at: new Date().toISOString() })
       .eq('conversation_id', conversationId)
-      .eq('read_at', null)
+      .is('read_at', null)
       .neq('sender_id', userId);
 
     if (error) throw error;
@@ -480,9 +480,9 @@ export const messagesAPI = {
   getUnreadCount: async (userId) => {
     const { count, error } = await supabase
       .from('messages')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .neq('sender_id', userId)
-      .eq('read_at', null);
+      .is('read_at', null);
 
     if (error) throw error;
     return count || 0;
