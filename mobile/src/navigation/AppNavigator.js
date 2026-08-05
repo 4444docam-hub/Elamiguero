@@ -1,6 +1,6 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { createStackNavigator, TransitionPresets } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -18,39 +18,65 @@ import FriendsScreen from '../screens/FriendsScreen';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const navTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: COLORS.background,
+    card: COLORS.surface,
+    text: COLORS.text,
+    border: COLORS.border,
+    primary: COLORS.primary,
+  },
+};
+
+const fadeOptions = TransitionPresets.FadeTransition;
+
 const AuthStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+  <Stack.Navigator screenOptions={{ ...fadeOptions, headerShown: false }}>
     <Stack.Screen name="Login" component={LoginScreen} />
     <Stack.Screen name="Register" component={RegisterScreen} />
   </Stack.Navigator>
 );
 
 const HomeStack = () => (
-  <Stack.Navigator>
-    <Stack.Screen 
-      name="Discover" 
+  <Stack.Navigator screenOptions={fadeOptions}>
+    <Stack.Screen
+      name="Discover"
       component={HomeScreen}
       options={{ headerShown: false }}
     />
-    <Stack.Screen 
-      name="Friends" 
+    <Stack.Screen
+      name="Friends"
       component={FriendsScreen}
-      options={{ title: 'Friends' }}
+      options={{
+        title: 'Friends',
+        headerStyle: { backgroundColor: COLORS.surface },
+        headerTintColor: COLORS.text,
+      }}
     />
   </Stack.Navigator>
 );
 
 const ChatStack = () => (
-  <Stack.Navigator>
-    <Stack.Screen 
-      name="ChatList" 
+  <Stack.Navigator screenOptions={fadeOptions}>
+    <Stack.Screen
+      name="ChatList"
       component={ChatListScreen}
-      options={{ title: 'Messages' }}
+      options={{
+        title: 'Messages',
+        headerStyle: { backgroundColor: COLORS.surface },
+        headerTintColor: COLORS.text,
+      }}
     />
-    <Stack.Screen 
-      name="Chat" 
+    <Stack.Screen
+      name="Chat"
       component={ChatScreen}
-      options={({ route }) => ({ title: route.params?.userName || 'Chat' })}
+      options={({ route }) => ({
+        title: route.params?.userName || 'Chat',
+        headerStyle: { backgroundColor: COLORS.surface },
+        headerTintColor: COLORS.text,
+      })}
     />
   </Stack.Navigator>
 );
@@ -75,6 +101,17 @@ const MainTabs = () => {
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textLight,
+        tabBarStyle: {
+          backgroundColor: COLORS.surface,
+          borderTopWidth: 2,
+          borderTopColor: COLORS.black,
+        },
+        tabBarBadgeStyle: {
+          backgroundColor: COLORS.primary,
+          color: COLORS.black,
+          fontSize: 10,
+          fontWeight: '800',
+        },
       })}
     >
       <Tab.Screen
@@ -110,7 +147,7 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       {isAuthenticated ? <MainTabs /> : <AuthStack />}
     </NavigationContainer>
   );

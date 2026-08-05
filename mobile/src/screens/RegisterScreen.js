@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../utils/constants';
+import { sharedStyles } from '../utils/theme';
+import NeonBackground from '../components/NeonBackground';
 
 const RegisterScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -64,100 +66,101 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join us and find new friends</Text>
-        </View>
+    <NeonBackground>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.backButton}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.subtitle}>Join us and find new friends</Text>
+          </View>
 
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name *"
-            value={formData.name}
-            onChangeText={(v) => handleChange('name', v)}
-            placeholderTextColor={COLORS.textLight}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Email *"
-            value={formData.email}
-            onChangeText={(v) => handleChange('email', v)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholderTextColor={COLORS.textLight}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password *"
-            value={formData.password}
-            onChangeText={(v) => handleChange('password', v)}
-            secureTextEntry
-            placeholderTextColor={COLORS.textLight}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password *"
-            value={formData.confirmPassword}
-            onChangeText={(v) => handleChange('confirmPassword', v)}
-            secureTextEntry
-            placeholderTextColor={COLORS.textLight}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Age"
-            value={formData.age}
-            onChangeText={(v) => handleChange('age', v)}
-            keyboardType="numeric"
-            placeholderTextColor={COLORS.textLight}
-          />
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Tell us about yourself..."
-            value={formData.bio}
-            onChangeText={(v) => handleChange('bio', v)}
-            multiline
-            numberOfLines={4}
-            placeholderTextColor={COLORS.textLight}
-          />
+          <View style={styles.form}>
+            <TextInput
+              style={sharedStyles.input}
+              placeholder="Full Name *"
+              value={formData.name}
+              onChangeText={(v) => handleChange('name', v)}
+              placeholderTextColor={COLORS.textLight}
+            />
+            <TextInput
+              style={sharedStyles.input}
+              placeholder="Email *"
+              value={formData.email}
+              onChangeText={(v) => handleChange('email', v)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor={COLORS.textLight}
+            />
+            <TextInput
+              style={sharedStyles.input}
+              placeholder="Password *"
+              value={formData.password}
+              onChangeText={(v) => handleChange('password', v)}
+              secureTextEntry
+              placeholderTextColor={COLORS.textLight}
+            />
+            <TextInput
+              style={sharedStyles.input}
+              placeholder="Confirm Password *"
+              value={formData.confirmPassword}
+              onChangeText={(v) => handleChange('confirmPassword', v)}
+              secureTextEntry
+              placeholderTextColor={COLORS.textLight}
+            />
+            <TextInput
+              style={sharedStyles.input}
+              placeholder="Age"
+              value={formData.age}
+              onChangeText={(v) => handleChange('age', v)}
+              keyboardType="numeric"
+              placeholderTextColor={COLORS.textLight}
+            />
+            <TextInput
+              style={[sharedStyles.input, styles.textArea]}
+              placeholder="Tell us about yourself..."
+              value={formData.bio}
+              onChangeText={(v) => handleChange('bio', v)}
+              multiline
+              numberOfLines={4}
+              placeholderTextColor={COLORS.textLight}
+            />
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color={COLORS.white} />
-            ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={COLORS.black} />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
+              )}
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.linkText}>
-              Already have an account? <Text style={styles.linkBold}>Sign In</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <TouchableOpacity
+              style={styles.linkButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.linkText}>
+                Already have an account? <Text style={styles.linkBold}>Sign In</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </NeonBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -175,24 +178,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '900',
+    letterSpacing: 2,
     color: COLORS.text,
     marginBottom: 10,
+    textTransform: 'uppercase',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    textShadowColor: COLORS.black,
+    textShadowOffset: { width: 3, height: 3 },
+    textShadowRadius: 0,
   },
   subtitle: {
     fontSize: 16,
     color: COLORS.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   form: {
     gap: 15,
-  },
-  input: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
   textArea: {
     height: 100,
@@ -200,18 +203,27 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 16,
     alignItems: 'center',
     marginTop: 10,
+    borderWidth: 3,
+    borderColor: COLORS.black,
+    shadowColor: '#000000',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 5,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   buttonText: {
-    color: COLORS.white,
+    color: COLORS.black,
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   linkButton: {
     alignItems: 'center',

@@ -18,15 +18,18 @@ export const getChatImageUrl = (path) => {
 };
 
 export const COLORS = {
-  primary: '#6C63FF',
-  secondary: '#FF6B6B',
-  background: '#F8F9FA',
-  card: '#FFFFFF',
-  text: '#2D3436',
-  textLight: '#636E72',
-  border: '#DFE6E9',
-  success: '#00B894',
-  error: '#FF6B6B',
+  primary: '#00E5FF',
+  secondary: '#FF2E88',
+  accent: '#B026FF',
+  background: '#0B0F2A',
+  surface: '#131A3F',
+  surfaceLight: '#1A2149',
+  card: '#151B3D',
+  text: '#EEF2FF',
+  textLight: '#8F9CCE',
+  border: '#2B3A6E',
+  success: '#39FF14',
+  error: '#FF2E88',
   white: '#FFFFFF',
   black: '#000000'
 };

@@ -15,14 +15,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { profileAPI, friendsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { COLORS, SWIPE_THRESHOLD, getProfileImageUrl } from '../utils/constants';
+import { FONTS, neonShadow, pixelShadow, sharedStyles } from '../utils/theme';
+import NeonBackground from '../components/NeonBackground';
+import ImageViewer from '../components/ImageViewer';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-const SwipeCard = ({ user, onSwipeLeft, onSwipeRight }) => {
+const SwipeCard = ({ user, onSwipeLeft, onSwipeRight, onPressImage }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const likeOpacity = useRef(new Animated.Value(0)).current;
   const dislikeOpacity = useRef(new Animated.Value(0)).current;
+  const entrance = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    Animated.spring(entrance, {
+      toValue: 1,
+      friction: 6,
+      tension: 60,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const callbacksRef = useRef({ onSwipeLeft, onSwipeRight });
   callbacksRef.current = { onSwipeLeft, onSwipeRight };
@@ -69,15 +82,27 @@ const SwipeCard = ({ user, onSwipeLeft, onSwipeRight }) => {
     extrapolate: 'clamp'
   });
 
+  const scale = translateX.interpolate({
+    inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+    outputRange: [0.95, 1.04, 0.95],
+    extrapolate: 'clamp',
+  });
+
   return (
     <Animated.View
-      style={[styles.card, { transform: [{ translateX }, { rotate }] }]}
+      style={[styles.card, { transform: [{ translateX }, { rotate }, { scale }, { scale: entrance }] }]}
       {...panResponder.panHandlers}
     >
-      <Image
-        source={{ uri: getProfileImageUrl(user.profile_image) }}
-        style={styles.cardImage}
-      />
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={onPressImage}
+        style={styles.cardImageTouchable}
+      >
+        <Image
+          source={{ uri: getProfileImageUrl(user.profile_image) }}
+          style={styles.cardImage}
+        />
+      </TouchableOpacity>
       <Animated.View
         pointerEvents="none"
         style={[styles.glowOverlay, styles.glowGreen, { opacity: likeOpacity }]}
@@ -113,6 +138,7 @@ const HomeScreen = ({ navigation }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewerImage, setViewerImage] = useState(null);
   const { user, profile } = useAuth();
 
   useEffect(() => {
@@ -149,18 +175,18 @@ const HomeScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <NeonBackground style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      </NeonBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <NeonBackground>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Discover</Text>
+        <Text style={sharedStyles.screenTitle}>Discover</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Friends')}>
-          <Ionicons name="people" size={28} color={COLORS.primary} />
+          <Ionicons name="people" size={28} color={COLORS.secondary} />
         </TouchableOpacity>
       </View>
       <View style={styles.cardsContainer}>
@@ -172,6 +198,7 @@ const HomeScreen = ({ navigation }) => {
                 user={u}
                 onSwipeLeft={handleSwipeLeft}
                 onSwipeRight={handleSwipeRight}
+                onPressImage={() => setViewerImage(getProfileImageUrl(u.profile_image))}
               />
             ))}
           </>
@@ -195,80 +222,97 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+      <ImageViewer
+        visible={!!viewerImage}
+        imageUrl={viewerImage}
+        onClose={() => setViewerImage(null)}
+      />
+    </NeonBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, backgroundColor: COLORS.white,
+    paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20,
   },
-  headerTitle: { fontSize: 28, fontWeight: 'bold', color: COLORS.text },
   cardsContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
   card: {
     position: 'absolute', width: SCREEN_WIDTH - 40, height: SCREEN_HEIGHT * 0.55,
-    backgroundColor: COLORS.white, borderRadius: 20, overflow: 'hidden',
-    elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25, shadowRadius: 3.84,
+    backgroundColor: COLORS.surface, borderRadius: 0, overflow: 'hidden',
+    borderWidth: 3, borderColor: COLORS.black,
+    ...pixelShadow(6),
   },
   cardImage: { width: '100%', height: '70%', resizeMode: 'cover' },
+  cardImageTouchable: { width: '100%', height: '70%' },
   cardInfo: { padding: 15 },
-  cardName: { fontSize: 24, fontWeight: 'bold', color: COLORS.text, marginBottom: 5 },
+  cardName: {
+    fontSize: 24, fontWeight: '900', color: COLORS.text, marginBottom: 5,
+    fontFamily: FONTS.arcade, letterSpacing: 1,
+  },
   cardBio: { fontSize: 14, color: COLORS.textLight, marginBottom: 10 },
   interestsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  interestTag: { backgroundColor: COLORS.primary + '20', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  interestText: { color: COLORS.primary, fontSize: 12, fontWeight: '500' },
+  interestTag: {
+    backgroundColor: COLORS.primary + '22',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 0,
+    borderWidth: 2, borderColor: COLORS.primary,
+  },
+  interestText: { color: COLORS.primary, fontSize: 12, fontWeight: '700' },
   likeStamp: {
     position: 'absolute', top: 50, right: 20, borderWidth: 4, borderColor: COLORS.success,
-    borderRadius: 10, padding: 12, transform: [{ rotate: '15deg' }],
+    borderRadius: 0, padding: 12, transform: [{ rotate: '15deg' }],
+    backgroundColor: COLORS.black + 'cc',
   },
   dislikeStamp: {
     position: 'absolute', top: 50, left: 20, borderWidth: 4, borderColor: COLORS.error,
-    borderRadius: 10, padding: 12, transform: [{ rotate: '-15deg' }],
+    borderRadius: 0, padding: 12, transform: [{ rotate: '-15deg' }],
+    backgroundColor: COLORS.black + 'cc',
   },
-  stampText: { fontSize: 28, fontWeight: 'bold', color: COLORS.success },
+  stampText: {
+    fontSize: 26, fontWeight: '900', color: COLORS.success,
+    letterSpacing: 2, fontFamily: FONTS.arcade,
+  },
   dislikeText: { color: COLORS.error },
   glowOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 20,
+    borderRadius: 0,
   },
   glowGreen: {
     borderWidth: 6,
     borderColor: COLORS.success,
-    backgroundColor: 'rgba(0, 184, 148, 0.12)',
-    shadowColor: COLORS.success,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 20,
-    elevation: 12,
+    backgroundColor: 'rgba(57, 255, 20, 0.12)',
+    ...neonShadow(COLORS.success, 24, 0.9),
   },
   glowRed: {
     borderWidth: 6,
     borderColor: COLORS.error,
-    backgroundColor: 'rgba(255, 107, 107, 0.12)',
-    shadowColor: COLORS.error,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 20,
-    elevation: 12,
+    backgroundColor: 'rgba(255, 46, 136, 0.12)',
+    ...neonShadow(COLORS.error, 24, 0.9),
   },
   actionButtons: {
     flexDirection: 'row', justifyContent: 'center', gap: 40,
     paddingVertical: 20, paddingBottom: 100,
   },
   actionButton: {
-    width: 70, height: 70, borderRadius: 35, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: COLORS.white, elevation: 3,
+    width: 70, height: 70, borderRadius: 0, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.surface, borderWidth: 3, borderColor: COLORS.black,
   },
-  nopeButton: { borderWidth: 2, borderColor: COLORS.error },
-  likeButton: { borderWidth: 2, borderColor: COLORS.success },
+  nopeButton: { ...pixelShadow(5) },
+  likeButton: { ...pixelShadow(5) },
   emptyState: { alignItems: 'center', justifyContent: 'center' },
-  emptyText: { fontSize: 18, color: COLORS.textLight, marginTop: 20, marginBottom: 20 },
-  refreshButton: { backgroundColor: COLORS.primary, paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },
-  refreshText: { color: COLORS.white, fontSize: 16, fontWeight: '600' },
+  emptyText: {
+    fontSize: 18, color: COLORS.textLight, marginTop: 20, marginBottom: 20,
+    fontFamily: FONTS.arcade, textTransform: 'uppercase', letterSpacing: 1,
+  },
+  refreshButton: {
+    backgroundColor: COLORS.primary, paddingHorizontal: 30, paddingVertical: 12,
+    borderRadius: 0, borderWidth: 3, borderColor: COLORS.black, ...pixelShadow(4),
+  },
+  refreshText: {
+    color: COLORS.black, fontSize: 16, fontWeight: '900',
+    letterSpacing: 1, textTransform: 'uppercase', fontFamily: FONTS.arcade,
+  },
 });
 
 export default HomeScreen;

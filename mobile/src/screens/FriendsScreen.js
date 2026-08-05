@@ -7,8 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { friendsAPI, conversationsAPI } from '../services/api';
 import { COLORS, getProfileImageUrl } from '../utils/constants';
+import { FONTS, pixelShadow } from '../utils/theme';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import NeonBackground from '../components/NeonBackground';
+import Confetti from '../components/Confetti';
 
 const FriendsScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -17,6 +20,7 @@ const FriendsScreen = ({ navigation }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [confetti, setConfetti] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -48,6 +52,7 @@ const FriendsScreen = ({ navigation }) => {
       await friendsAPI.acceptRequest(requestId);
       loadData();
       refreshCounts();
+      setConfetti(true);
       Alert.alert('Success', 'Friend request accepted!');
     } catch (error) {
       Alert.alert('Error', 'Failed to accept request');
@@ -136,14 +141,15 @@ const FriendsScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <NeonBackground style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      </NeonBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <NeonBackground>
+      <Confetti active={confetti} onDone={() => setConfetti(false)} />
       <View style={styles.tabContainer}>
         <TouchableOpacity style={[styles.tab, activeTab === 'requests' && styles.activeTab]} onPress={() => setActiveTab('requests')}>
           <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>Requests ({pendingRequests.length})</Text>
@@ -173,43 +179,53 @@ const FriendsScreen = ({ navigation }) => {
           <FlatList data={friends} renderItem={renderFriend} keyExtractor={item => item.id} />
         )
       )}
-    </View>
+    </NeonBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   tabContainer: {
-    flexDirection: 'row', backgroundColor: COLORS.white,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row',
+    borderBottomWidth: 2, borderBottomColor: COLORS.black,
   },
   tab: { flex: 1, paddingVertical: 15, alignItems: 'center' },
-  activeTab: { borderBottomWidth: 3, borderBottomColor: COLORS.primary },
-  tabText: { fontSize: 14, color: COLORS.textLight, fontWeight: '500' },
+  activeTab: { borderBottomWidth: 4, borderBottomColor: COLORS.primary },
+  tabText: {
+    fontSize: 14, color: COLORS.textLight, fontWeight: '900',
+    textTransform: 'uppercase', letterSpacing: 1, fontFamily: FONTS.arcade,
+  },
   activeTabText: { color: COLORS.primary },
   requestItem: {
-    flexDirection: 'row', alignItems: 'center', padding: 15,
-    backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', padding: 15, marginHorizontal: 15, marginTop: 12,
+    backgroundColor: COLORS.surface, borderRadius: 0, borderWidth: 3, borderColor: COLORS.black,
+    ...pixelShadow(4),
   },
-  avatar: { width: 55, height: 55, borderRadius: 27.5, marginRight: 15 },
+  avatar: { width: 55, height: 55, borderRadius: 0, marginRight: 15, borderWidth: 2, borderColor: COLORS.border },
   requestInfo: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 3 },
+  name: {
+    fontSize: 16, fontWeight: '900', color: COLORS.text, marginBottom: 3,
+    fontFamily: FONTS.arcade, letterSpacing: 1, textTransform: 'uppercase',
+  },
   bio: { fontSize: 13, color: COLORS.textLight },
   requestActions: { flexDirection: 'row', gap: 10 },
-  actionBtn: { width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center' },
-  acceptBtn: { backgroundColor: COLORS.success },
-  rejectBtn: { backgroundColor: COLORS.error },
+  actionBtn: { width: 45, height: 45, borderRadius: 0, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.black },
+  acceptBtn: { backgroundColor: COLORS.success, ...pixelShadow(3) },
+  rejectBtn: { backgroundColor: COLORS.error, ...pixelShadow(3) },
   friendItem: {
-    flexDirection: 'row', alignItems: 'center', padding: 15,
-    backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', padding: 15, marginHorizontal: 15, marginTop: 12,
+    backgroundColor: COLORS.surface, borderRadius: 0, borderWidth: 3, borderColor: COLORS.black,
+    ...pixelShadow(4),
   },
   friendInfo: { flex: 1 },
   friendActions: { flexDirection: 'row', gap: 15 },
   chatBtn: { padding: 8 },
   removeBtn: { padding: 8 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-  emptyText: { fontSize: 18, color: COLORS.text, marginTop: 20 },
+  emptyText: {
+    fontSize: 18, color: COLORS.text, marginTop: 20,
+    fontFamily: FONTS.arcade, textTransform: 'uppercase', letterSpacing: 1,
+  },
   emptySubtext: { fontSize: 14, color: COLORS.textLight, marginTop: 10, textAlign: 'center' },
 });
 

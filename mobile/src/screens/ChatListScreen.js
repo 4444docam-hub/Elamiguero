@@ -7,8 +7,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { conversationsAPI, messagesAPI } from '../services/api';
 import { COLORS, getProfileImageUrl } from '../utils/constants';
+import { FONTS, pixelShadow } from '../utils/theme';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import NeonBackground from '../components/NeonBackground';
 
 const ChatListScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -122,14 +124,14 @@ const ChatListScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <NeonBackground style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      </NeonBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <NeonBackground>
       {conversations.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="chatbubbles-outline" size={80} color={COLORS.border} />
@@ -144,32 +146,39 @@ const ChatListScreen = ({ navigation }) => {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
-    </View>
+    </NeonBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { justifyContent: 'center', alignItems: 'center' },
   conversationItem: {
-    flexDirection: 'row', alignItems: 'center', padding: 15,
-    backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', padding: 15, marginHorizontal: 15, marginTop: 12,
+    backgroundColor: COLORS.surface, borderRadius: 0, borderWidth: 3, borderColor: COLORS.black,
+    ...pixelShadow(4),
   },
-  avatar: { width: 55, height: 55, borderRadius: 27.5, marginRight: 15 },
+  avatar: { width: 55, height: 55, borderRadius: 0, marginRight: 15, borderWidth: 2, borderColor: COLORS.border },
   conversationInfo: { flex: 1 },
   nameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
-  name: { fontSize: 16, fontWeight: '600', color: COLORS.text, flex: 1 },
+  name: {
+    fontSize: 16, fontWeight: '900', color: COLORS.text, flex: 1,
+    fontFamily: FONTS.arcade, letterSpacing: 1, textTransform: 'uppercase',
+  },
   rightSide: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  time: { fontSize: 12, color: COLORS.textLight },
+  time: { fontSize: 12, color: COLORS.textLight, fontFamily: FONTS.arcade },
   lastMessage: { fontSize: 14, color: COLORS.textLight },
   lastMessageUnread: { color: COLORS.text, fontWeight: '500' },
   badge: {
-    minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6,
+    minWidth: 22, height: 22, borderRadius: 0, paddingHorizontal: 6,
     backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.black,
   },
-  badgeText: { color: COLORS.white, fontSize: 12, fontWeight: '700' },
+  badgeText: { color: COLORS.black, fontSize: 12, fontWeight: '900' },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
-  emptyText: { fontSize: 20, fontWeight: '600', color: COLORS.text, marginTop: 20 },
+  emptyText: {
+    fontSize: 20, fontWeight: '900', color: COLORS.text, marginTop: 20,
+    fontFamily: FONTS.arcade, textTransform: 'uppercase', letterSpacing: 1,
+  },
   emptySubtext: { fontSize: 14, color: COLORS.textLight, marginTop: 10, textAlign: 'center' },
 });
 

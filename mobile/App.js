@@ -8,7 +8,7 @@ export default function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="light" />
         <AppNavigator />
       </NotificationProvider>
     </AuthProvider>
