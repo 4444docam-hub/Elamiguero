@@ -176,11 +176,10 @@ export const friendsAPI = {
   sendRequest: async (fromUserId, toUserId) => {
     const { data, error } = await supabase
       .from('friend_requests')
-      .insert({
-        from_user_id: fromUserId,
-        to_user_id: toUserId,
-        status: 'pending'
-      })
+      .upsert(
+        { from_user_id: fromUserId, to_user_id: toUserId, status: 'pending' },
+        { onConflict: 'from_user_id,to_user_id' }
+      )
       .select()
       .single();
     if (error) throw error;
